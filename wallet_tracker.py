@@ -3,27 +3,49 @@ from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
 from dotenv import load_dotenv
 import os
-import numpy as np
 
 # Load API Token from API.env
 load_dotenv("API.env")
 
 # Constants for bot
 TOKEN: Final = os.getenv("API_TOKEN")
+SOL_TOKEN: Final = os,getenv("SOL_TOKEN")
 BOT_USER: Final = '@OxSolBot'
 
+# Check Valid Token
 if not TOKEN:
     raise ValueError('API_TOKEN is missing! Please check API.env')
 
+# Wallet Addresses
+wallet_addresses = [
+
+]
+
+
+# Commands
 async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text('Thank you for joining Ox Wallet Tracker!')
 
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text('Please be patient, the tracker may be experiencing downtime')
 
-async def custom_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def add_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text('This is a custom command')
 
+async def delete_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text('This is a custom command')
+
+async def list_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text('This is a custom command')
+
+
+# Verify Address
+def valid_address(sol_addy):
+    if 44 >= len(sol_addy) >= 32:
+        return True
+    if sol_addy not in wallet_addresses:
+        return True
+    return False
 
 # Responses
 
@@ -63,7 +85,6 @@ if __name__ == '__main__':
     # Commands
     app.add_handler(CommandHandler('start', start_command))
     app.add_handler(CommandHandler('help', help_command))
-    app.add_handler(CommandHandler('custom', custom_command))
 
     # Messages
     app.add_handler(MessageHandler(filters.TEXT, handle_message))
