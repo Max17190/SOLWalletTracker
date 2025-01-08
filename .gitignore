@@ -1,0 +1,5 @@
+# Ignore environment files
+API.env
+*.env
+.env
+
