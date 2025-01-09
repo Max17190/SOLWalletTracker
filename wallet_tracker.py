@@ -25,7 +25,7 @@ if not TG_TOKEN or HELIUS_TOKEN or FIREBASE_CREDENTIALS or FIREBASE_DB:
     raise ValueError('An API key is missing! Please check .env')
 
 # SOL Addresses
-wallet_addresses = {}
+wallet_addresses = set()
 
 # Commands
 async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -38,14 +38,25 @@ async def add_wallet(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """
     Add a valid wallet address to track
     """
+    user_id = str(update.message.chat.id)
+
     if not context.args:
         await update.message.reply_text('Please provide SOL wallet address!')
         return
-    sol_addy = str(context.args[0])
+    
+    sol_addy = context.args[0]
 
     if valid_address(sol_addy):
-        wallet_addresses.add(sol_addy)
-        await update.message.reply_text(f'Wallet {sol_addy} successfully added!')
+        user_ref = db.reference(f'users/{user_id}/wallets')
+        user_wallets = user_ref.get() or []
+
+        if sol_addy not in user_wallets:
+            user_wallets.append(sol_addy)
+            user_ref.set(user_wallets)
+            await update.message.reply_text(f'Wallet {sol_addy} successfully added!')
+        else:
+            await update.message.reply_text(f'Wallet {sol_addy} is already being tracked!')
+
     else:
         await update.message.reply_text(f'Wallet {sol_addy} is invalid!')
 
@@ -53,6 +64,8 @@ async def remove_wallet(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """
     Remove a valid wallet from tracked list
     """
+    user_id = str(u[date.message.chat.id])
+
     if not context.args:
         await update.message.reply_text('Please provide a SOL wallet address!')
         return
