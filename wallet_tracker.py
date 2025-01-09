@@ -38,21 +38,36 @@ async def add_wallet(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if valid_address(sol_addy):
         wallet_addresses.add(sol_addy)
-        await update.message.reply_text(f'Wallet ${sol_addy} successfully added!')
+        await update.message.reply_text(f'Wallet {sol_addy} successfully added!')
     else:
-        await update.message.reply_text(f'Wallet ${sol_addy} is invalid!')
+        await update.message.reply_text(f'Wallet {sol_addy} is invalid!')
 
 async def remove_wallet(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """
     Remove a valid wallet from tracked list
     """
-    await update.message.reply_text('This is a custom command')
+    if not context.args:
+        await update.message.reply_text('Please provide a SOL wallet address!')
+        return
+    sol_addy = str(context.args[0])
+    
+    if sol_addy in wallet_addresses:
+        wallet_addresses.remove(sol_addy)
+        await update.message.reply_text(f'Successfuly removed wallet: {sol_addy}')
+    else:
+        await update.message.reply_text(f'Unable to remove wallet: {sol_addy}')
+
 
 async def list_wallet(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """
-    Display all tracked wallets
+    Display all tracked wallets, each on a seperate line
     """
-    await update.message.reply_text('This is a custom command')
+    if not wallet_addresses:
+        await update.message.reply_text('No wallets currently being tracked.')
+    else:
+        wallets = '\n'.join(wallet_addresses)
+        await update.message.reply_text(f'Tracked Wallets:\n{wallets}')
+
 
 
 # Verify Address
@@ -60,6 +75,10 @@ def valid_address(sol_addy):
     if 44 >= len(sol_addy) >= 32 and sol_addy not in wallet_addresses:
         return True
     return False
+
+# Iterate Wallets
+def get_wallets():
+    for 
 
 # Responses
 
