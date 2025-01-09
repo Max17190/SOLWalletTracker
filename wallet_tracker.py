@@ -46,10 +46,11 @@ async def add_wallet(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     sol_addy = context.args[0]
 
-    if valid_address(sol_addy):
-        user_ref = db.reference(f'users/{user_id}/wallets')
-        user_wallets = user_ref.get() or []
+    # Fetch wallets from Firebase
+    user_ref = db.reference(f'users/{user_id}/wallets')
+    user_wallets = user_ref.get() or []
 
+    if valid_address(sol_addy):
         if sol_addy not in user_wallets:
             user_wallets.append(sol_addy)
             user_ref.set(user_wallets)
@@ -64,29 +65,40 @@ async def remove_wallet(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """
     Remove a valid wallet from tracked list
     """
-    user_id = str(u[date.message.chat.id])
+    user_id = str(update.message.chat.id)
 
     if not context.args:
         await update.message.reply_text('Please provide a SOL wallet address!')
         return
-    sol_addy = str(context.args[0])
+    sol_addy = context.args[0]
+
+    #Fetch wallets from Firebase
+    user_ref = db.reference(f'users/{user_id}/wallets')
+    user_wallets = user_ref.get() or []
     
-    if sol_addy in wallet_addresses:
-        wallet_addresses.remove(sol_addy)
-        await update.message.reply_text(f'Successfuly removed wallet: {sol_addy}')
+    if sol_addy in user_wallets:
+        user_wallets.remove(sol_addy)
+        user_ref.set(user_wallets)
+        await update.message.reply_text(f'Successfully removed wallet: {sol_addy}')
     else:
-        await update.message.reply_text(f'Unable to remove wallet: {sol_addy}')
+        await update.message.reply_text(f'Wallet is not being tracked: {sol_addy}')
 
 
 async def list_wallet(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """
     Display all tracked wallets, each on a seperate line
     """
+    user_id = str(update.message.chat.id)
+
+    # Fetch wallets from Firebase
+    user_ref = db.reference(f'users/{user_id}/wallets')
+    user_wallets = user_ref.get() or []
+
     if not wallet_addresses:
-        await update.message.reply_text('No wallets currently being tracked.')
+        await update.message.reply_text('No wallets are currently being tracked.')
     else:
-        wallets = '\n'.join(wallet_addresses)
-        await update.message.reply_text(f'Tracked Wallets:\n{wallets}')
+        wallets_list = '\n'.join(user_wallets)
+        await update.message.reply_text(f'Tracked Wallets:\n{wallets_list}')
 
 
 
