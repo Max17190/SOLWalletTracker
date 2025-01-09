@@ -21,7 +21,7 @@ HELIUS_TOKEN: Final = os.getenv("HELIUS_TOKEN")
 BOT_USER: Final = '@OxSolBot'
 
 # Check Valid Token
-if not TG_TOKEN or HELIUS_TOKEN:
+if not TG_TOKEN or HELIUS_TOKEN or FIREBASE_CREDENTIALS or FIREBASE_DB:
     raise ValueError('An API key is missing! Please check .env')
 
 # SOL Addresses
