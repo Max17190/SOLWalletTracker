@@ -4,9 +4,16 @@ from telegram.ext import Application, CommandHandler, MessageHandler, filters, C
 from dotenv import load_dotenv
 import os
 import requests
+import firebase_admin
+from firebase_admin import credentials, db
 
-# Load API Tokens from .env
 load_dotenv("API.env")
+
+# Load Firebase API
+FIREBASE_CREDENTIALS: Final = os.getenv('FIRE_JSON')
+FIREBASE_DB: Final = os.getenv('FIRE_URL')
+
+# Load TG BOT AND HELIUS API
 TG_TOKEN: Final = os.getenv("TG_TOKEN")
 HELIUS_TOKEN: Final = os.getenv("HELIUS_TOKEN")
 
@@ -75,7 +82,6 @@ def valid_address(sol_addy):
     if 44 >= len(sol_addy) >= 32 and sol_addy not in wallet_addresses:
         return True
     return False
-
 
 # Responses
 
