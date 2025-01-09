@@ -3,24 +3,22 @@ from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
 from dotenv import load_dotenv
 import os
+import requests
 
-# Load API Token from API.env
+# Load API Tokens from .env
 load_dotenv("API.env")
+TG_TOKEN: Final = os.getenv("TG_TOKEN")
+HELIUS_TOKEN: Final = os.getenv("HELIUS_TOKEN")
 
-# Constants for bot
-TOKEN: Final = os.getenv("API_TOKEN")
-SOL_TOKEN: Final = os,getenv("SOL_TOKEN")
+# Bot name
 BOT_USER: Final = '@OxSolBot'
 
 # Check Valid Token
-if not TOKEN:
-    raise ValueError('API_TOKEN is missing! Please check API.env')
+if not TG_TOKEN or HELIUS_TOKEN:
+    raise ValueError('An API key is missing! Please check .env')
 
-# Wallet Addresses
-wallet_addresses = [
-
-]
-
+# SOL Addresses
+wallet_addresses = {}
 
 # Commands
 async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -29,21 +27,37 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text('Please be patient, the tracker may be experiencing downtime')
 
-async def add_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def add_wallet(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """
+    Add a valid wallet address to track
+    """
+    if not context.args:
+        await update.message.reply_text('Please provide SOL wallet address!')
+        return
+    sol_addy = str(context.args[0])
+
+    if valid_address(sol_addy):
+        wallet_addresses.add(sol_addy)
+        await update.message.reply_text(f'Wallet ${sol_addy} successfully added!')
+    else:
+        await update.message.reply_text(f'Wallet ${sol_addy} is invalid!')
+
+async def remove_wallet(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """
+    Remove a valid wallet from tracked list
+    """
     await update.message.reply_text('This is a custom command')
 
-async def delete_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text('This is a custom command')
-
-async def list_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def list_wallet(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """
+    Display all tracked wallets
+    """
     await update.message.reply_text('This is a custom command')
 
 
 # Verify Address
 def valid_address(sol_addy):
-    if 44 >= len(sol_addy) >= 32:
-        return True
-    if sol_addy not in wallet_addresses:
+    if 44 >= len(sol_addy) >= 32 and sol_addy not in wallet_addresses:
         return True
     return False
 
