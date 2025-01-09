@@ -76,9 +76,6 @@ def valid_address(sol_addy):
         return True
     return False
 
-# Iterate Wallets
-def get_wallets():
-    for 
 
 # Responses
 
