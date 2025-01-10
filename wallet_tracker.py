@@ -7,6 +7,7 @@ import requests
 import firebase_admin
 from firebase_admin import credentials, db
 import asyncio
+from firebase_helpers import get_user_wallets, save_user_wallet, remove_user_wallet
 
 # Load Environment Variables
 load_dotenv("API.env")
@@ -85,39 +86,6 @@ async def timeout_user_state(user_id: str, timeout: int = 120):
     if user_id in user_states:
         del user_states[user_id]
 
-# Firebase References
-def get_user_wallets(user_id):
-    try:
-        user_ref = db.reference(f'users/{user_id}/wallets')
-        return user_ref.get() or {}
-    except Exception as e:
-        print(f"Error fetching wallets for user {user_id}: {e}")
-        return None
-    
-def save_user_wallet(user_id, wallet_name, wallet_address):
-    try:
-        user_ref = db.reference(f'users/{user_id}/wallets')
-        user_wallets = user_ref.get() or {}
-        user_wallets[wallet_name] = wallet_address
-        user_ref.set(user_wallets)
-        return True
-    except Exception as e:
-        print(f"Error saving wallet for user {user_id}: {e}")
-        return False
-
-def remove_user_wallet(user_id, wallet_name):
-    try:
-        user_ref = db.reference(f'users/{user_id}/wallets')
-        user_wallets = user_ref.get() or {}
-        if wallet_name in user_wallets:
-            del user_wallets[wallet_name]
-            user_ref.set(user_wallets)
-            return True
-        return False
-    except Exception as e:
-        print(f"Error removing wallet for user {user_id}: {e}")
-        return False
-
 # Responses
 def handle_response(text: str) -> str:
     processed: str = text.lower()
@@ -157,26 +125,15 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         wallet_name = state_info['wallet_name']
         sol_addy = user_input
 
-        # Save to Firebase
         if valid_address(sol_addy):
-            user_ref = db.reference(f'users/{user_id}/wallets')
-            user_wallets = user_ref.get() or {}
-
-            if wallet_name not in user_wallets:
-                user_wallets[wallet_name] = sol_addy
-                user_ref.set(user_wallets)
+            if save_user_wallet(user_id, wallet_name, sol_addy):
                 await update.message.reply_text(f'Wallet {wallet_name} successfully added: {sol_addy}')
             else:
-                await update.message.reply_text(f'A wallet with name {wallet_name} already exists!')
-
-        else: 
+                await update.message.reply_text('An error occurred while saving your wallet.')
+        else:
             await update.message.reply_text(f'Provided address is invalid: {sol_addy}')
-        
-        # Clear state
+
         del user_states[user_id]
-        return
-    
-    await update.message.reply_text(f'Please add a new wallet :D')
 
 async def error(update: Update, context: ContextTypes.DEFAULT_TYPE):
     print(f'Update {update} caused error {context.error}')
