@@ -14,7 +14,7 @@ load_dotenv("API.env")
 
 # Load Firebase API
 FIREBASE_CREDENTIALS: Final = os.getenv('FIRE_JSON')
-FIREBASE_DB: Final = os.getenv('FIRE_URL')
+FIREBASE_DB: Final = os.getenv('FIRE_PATH')
 
 # Initialize Firebase
 cred = credentials.Certificate(FIREBASE_CREDENTIALS)
