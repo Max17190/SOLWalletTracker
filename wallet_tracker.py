@@ -6,6 +6,7 @@ import os
 import requests
 import firebase_admin
 from firebase_admin import credentials, db
+import asyncio
 
 # Load Environment Variables
 load_dotenv("API.env")
@@ -31,9 +32,6 @@ BOT_USER: Final = '@OxSolBot'
 if not (TG_TOKEN and HELIUS_TOKEN and FIREBASE_CREDENTIALS and FIREBASE_DB):
     raise ValueError('An API key is missing! Please check .env')
 
-# SOL Addresses
-wallet_addresses = set()
-
 # Global State
 user_states = {}
 
@@ -49,7 +47,7 @@ async def add_wallet(update: Update, context: ContextTypes.DEFAULT_TYPE):
     Add a valid wallet address to track
     """
     user_id = str(update.message.chat.id)
-    user_states[user_id] = {"state:" "waiting_for_wallet_name"}
+    user_states[user_id] = {"state": "waiting_for_wallet_name"}
     await update.message.reply_text('Please provide a name for your wallet')
     
 async def remove_wallet(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -59,7 +57,7 @@ async def remove_wallet(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = str(update.message.chat.id)
 
     if not context.args:
-        await update.message.reply_text('Please provide the name of the wallet to remove!\nExample: /remove_wallet MyFirstWallet')
+        await update.message.reply_text('Please provide the name of the wallet to remove!')
         return
 
     wallet_name = context.args[0]
@@ -93,16 +91,19 @@ async def list_wallet(update: Update, context: ContextTypes.DEFAULT_TYPE):
         wallets_list = '\n'.join([f'{name}: {address}' for name, address in user_wallets.items()])
         await update.message.reply_text(f'Tracked Wallets:\n{wallets_list}')
 
-
-
 # Verify Address
 def valid_address(sol_addy):
-    if 44 >= len(sol_addy) >= 32 and sol_addy not in wallet_addresses:
+    if 44 >= len(sol_addy) >= 32:
         return True
     return False
 
-# Responses
+# Reset User State
+async def timeout_user_state(user_id: str, timeout: int = 120):
+    await asyncio.sleep(timeout)
+    if user_id in user_states:
+        del user_states[user_id]
 
+# Responses
 def handle_response(text: str) -> str:
     processed: str = text.lower()
 
@@ -131,6 +132,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 'state': 'waiting_for_wallet_address',
                 'wallet_name': user_input
             }
+
             await update.message.reply_text(f'Got it! Now provide the wallet address for {user_input}')
             return
         
@@ -150,6 +152,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 await update.message.reply_text(f'Wallet {wallet_name} successfully added: {sol_addy}')
             else:
                 await update.message.reply_text(f'A wallet with name {wallet_name} already exists!')
+
         else: 
             await update.message.reply_text(f'Provided address is invalid: {sol_addy}')
         
