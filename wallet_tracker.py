@@ -3,9 +3,8 @@ from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
 from dotenv import load_dotenv
 import os
-import requests
 import firebase_admin
-from firebase_admin import credentials, db
+from firebase_admin import credentials
 import asyncio
 from firebase_helpers import get_user_wallets, save_user_wallet, remove_user_wallet
 
@@ -24,7 +23,8 @@ firebase_admin.initialize_app(cred, {
 
 # Load TG BOT AND HELIUS API
 TG_TOKEN: Final = os.getenv("TG_TOKEN")
-HELIUS_TOKEN: Final = os.getenv("HELIUS_TOKEN")
+HELIUS_TOKEN: Final = os.getenv("HELIUS_KEY")
+HELIUS_WEBHOOK: Final = os.getenv("HELIUS_WEBHOOK")
 
 # Bot name
 BOT_USER: Final = '@OxSolBot'
@@ -76,9 +76,14 @@ async def list_wallet(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 # Verify Address
 def valid_address(sol_addy):
-    if 44 >= len(sol_addy) >= 32:
-        return True
-    return False
+    base58_chars = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz'
+    address_length = [32, 44]
+    if len(sol_addy) < address_length[0] or len(sol_addy) > address_length[1]:
+        return False
+    for char in sol_addy:
+        if char not in base58_chars:
+            return False
+    return True
 
 # Reset User State
 async def timeout_user_state(user_id: str, timeout: int = 120):
