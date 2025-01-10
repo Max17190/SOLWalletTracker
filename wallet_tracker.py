@@ -28,7 +28,7 @@ HELIUS_TOKEN: Final = os.getenv("HELIUS_TOKEN")
 BOT_USER: Final = '@OxSolBot'
 
 # Check Valid Token
-if not TG_TOKEN or HELIUS_TOKEN or FIREBASE_CREDENTIALS or FIREBASE_DB:
+if not (TG_TOKEN and HELIUS_TOKEN and FIREBASE_CREDENTIALS and FIREBASE_DB):
     raise ValueError('An API key is missing! Please check .env')
 
 # SOL Addresses
@@ -54,40 +54,43 @@ async def add_wallet(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
 async def remove_wallet(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """
-    Remove a valid wallet from tracked list
+    Remove a wallet by its name.
     """
     user_id = str(update.message.chat.id)
 
     if not context.args:
-        await update.message.reply_text('Please provide a SOL wallet address!')
+        await update.message.reply_text('Please provide the name of the wallet to remove!\nExample: /remove_wallet MyFirstWallet')
         return
-    sol_addy = context.args[0]
 
-    #Fetch wallets from Firebase
+    wallet_name = context.args[0]
+
+    # Fetch wallets from Firebase
     user_ref = db.reference(f'users/{user_id}/wallets')
-    user_wallets = user_ref.get() or []
-    
-    if sol_addy in user_wallets:
-        user_wallets.remove(sol_addy)
+    user_wallets = user_ref.get() or {}
+
+    if wallet_name in user_wallets:
+        # Remove the wallet by its name
+        del user_wallets[wallet_name]
         user_ref.set(user_wallets)
-        await update.message.reply_text(f'Successfully removed wallet: {sol_addy}')
+        await update.message.reply_text(f'Successfully removed wallet: "{wallet_name}"')
     else:
-        await update.message.reply_text(f'Wallet is not being tracked: {sol_addy}')
+        await update.message.reply_text(f'No wallet found with the name "{wallet_name}".')
 
 async def list_wallet(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """
-    Display all tracked wallets, each on a seperate line
+    Display all tracked wallets with their names and addresses.
     """
     user_id = str(update.message.chat.id)
 
     # Fetch wallets from Firebase
     user_ref = db.reference(f'users/{user_id}/wallets')
-    user_wallets = user_ref.get() or []
+    user_wallets = user_ref.get() or {}
 
-    if not wallet_addresses:
+    if not user_wallets:
         await update.message.reply_text('No wallets are currently being tracked.')
     else:
-        wallets_list = '\n'.join(user_wallets)
+        # Format the list of wallets
+        wallets_list = '\n'.join([f'{name}: {address}' for name, address in user_wallets.items()])
         await update.message.reply_text(f'Tracked Wallets:\n{wallets_list}')
 
 
@@ -160,21 +163,21 @@ async def error(update: Update, context: ContextTypes.DEFAULT_TYPE):
     print(f'Update {update} caused error {context.error}')
 
 if __name__ == '__main__':
-    app = Application.builder().token(TOKEN).build()
+    app = Application.builder().token(TG_TOKEN).build()
 
-    # Commands
-    # Add handlers for commands and messages
+    # Command Handlers
     app.add_handler(CommandHandler('start', start_command))
     app.add_handler(CommandHandler('help', help_command))
     app.add_handler(CommandHandler('add_wallet', add_wallet))
+    app.add_handler(CommandHandler('remove_wallet', remove_wallet))  
+    app.add_handler(CommandHandler('list_wallet', list_wallet))
+
+    # Message Handler
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
 
-    # Messages
-    app.add_handler(MessageHandler(filters.TEXT, handle_message))
-
-    # Errors
+    # Error Handler
     app.add_error_handler(error)
 
-    # Polls the bot
+    # Start polling
     print('Polling...')
     app.run_polling(poll_interval=3)
