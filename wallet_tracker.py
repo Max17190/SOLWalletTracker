@@ -51,9 +51,6 @@ async def add_wallet(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text('Please provide a name for your wallet')
     
 async def remove_wallet(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """
-    Remove a wallet by its name.
-    """
     user_id = str(update.message.chat.id)
 
     if not context.args:
@@ -61,33 +58,18 @@ async def remove_wallet(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     wallet_name = context.args[0]
-
-    # Fetch wallets from Firebase
-    user_ref = db.reference(f'users/{user_id}/wallets')
-    user_wallets = user_ref.get() or {}
-
-    if wallet_name in user_wallets:
-        # Remove the wallet by its name
-        del user_wallets[wallet_name]
-        user_ref.set(user_wallets)
+    if remove_user_wallet(user_id, wallet_name):
         await update.message.reply_text(f'Successfully removed wallet: "{wallet_name}"')
     else:
         await update.message.reply_text(f'No wallet found with the name "{wallet_name}".')
 
 async def list_wallet(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """
-    Display all tracked wallets with their names and addresses.
-    """
     user_id = str(update.message.chat.id)
-
-    # Fetch wallets from Firebase
-    user_ref = db.reference(f'users/{user_id}/wallets')
-    user_wallets = user_ref.get() or {}
+    user_wallets = get_user_wallets(user_id)
 
     if not user_wallets:
         await update.message.reply_text('No wallets are currently being tracked.')
     else:
-        # Format the list of wallets
         wallets_list = '\n'.join([f'{name}: {address}' for name, address in user_wallets.items()])
         await update.message.reply_text(f'Tracked Wallets:\n{wallets_list}')
 
@@ -102,6 +84,39 @@ async def timeout_user_state(user_id: str, timeout: int = 120):
     await asyncio.sleep(timeout)
     if user_id in user_states:
         del user_states[user_id]
+
+# Firebase References
+def get_user_wallets(user_id):
+    try:
+        user_ref = db.reference(f'users/{user_id}/wallets')
+        return user_ref.get() or {}
+    except Exception as e:
+        print(f"Error fetching wallets for user {user_id}: {e}")
+        return None
+    
+def save_user_wallet(user_id, wallet_name, wallet_address):
+    try:
+        user_ref = db.reference(f'users/{user_id}/wallets')
+        user_wallets = user_ref.get() or {}
+        user_wallets[wallet_name] = wallet_address
+        user_ref.set(user_wallets)
+        return True
+    except Exception as e:
+        print(f"Error saving wallet for user {user_id}: {e}")
+        return False
+
+def remove_user_wallet(user_id, wallet_name):
+    try:
+        user_ref = db.reference(f'users/{user_id}/wallets')
+        user_wallets = user_ref.get() or {}
+        if wallet_name in user_wallets:
+            del user_wallets[wallet_name]
+            user_ref.set(user_wallets)
+            return True
+        return False
+    except Exception as e:
+        print(f"Error removing wallet for user {user_id}: {e}")
+        return False
 
 # Responses
 def handle_response(text: str) -> str:
@@ -128,13 +143,14 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         # Save Wallet Name
         if state_info['state'] == 'waiting_for_wallet_name':
+
             user_states[user_id] = {
-                'state': 'waiting_for_wallet_address',
-                'wallet_name': user_input
+            'state': 'waiting_for_wallet_address',
+            'wallet_name': user_input
             }
 
-            await update.message.reply_text(f'Got it! Now provide the wallet address for {user_input}')
-            return
+        await update.message.reply_text(f'Got it! Now provide the wallet address for {user_input}')
+        return
         
     # State 2: Wallet Address
     elif state_info['state'] == 'waiting_for_wallet_address':
