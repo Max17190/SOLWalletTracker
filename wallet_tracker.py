@@ -7,11 +7,18 @@ import requests
 import firebase_admin
 from firebase_admin import credentials, db
 
+# Load Environment Variables
 load_dotenv("API.env")
 
 # Load Firebase API
 FIREBASE_CREDENTIALS: Final = os.getenv('FIRE_JSON')
 FIREBASE_DB: Final = os.getenv('FIRE_URL')
+
+# Initialize Firebase
+cred = credentials.Certificate(FIREBASE_CREDENTIALS)
+firebase_admin.initialize_app(cred, {
+    'databaseURL': FIREBASE_DB
+})
 
 # Load TG BOT AND HELIUS API
 TG_TOKEN: Final = os.getenv("TG_TOKEN")
@@ -27,6 +34,9 @@ if not TG_TOKEN or HELIUS_TOKEN or FIREBASE_CREDENTIALS or FIREBASE_DB:
 # SOL Addresses
 wallet_addresses = set()
 
+# Global State
+user_states = {}
+
 # Commands
 async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text('Thank you for joining Ox Wallet Tracker!')
@@ -39,28 +49,9 @@ async def add_wallet(update: Update, context: ContextTypes.DEFAULT_TYPE):
     Add a valid wallet address to track
     """
     user_id = str(update.message.chat.id)
-
-    if not context.args:
-        await update.message.reply_text('Please provide SOL wallet address!')
-        return
+    user_states[user_id] = {"state:" "waiting_for_wallet_name"}
+    await update.message.reply_text('Please provide a name for your wallet')
     
-    sol_addy = context.args[0]
-
-    # Fetch wallets from Firebase
-    user_ref = db.reference(f'users/{user_id}/wallets')
-    user_wallets = user_ref.get() or []
-
-    if valid_address(sol_addy):
-        if sol_addy not in user_wallets:
-            user_wallets.append(sol_addy)
-            user_ref.set(user_wallets)
-            await update.message.reply_text(f'Wallet {sol_addy} successfully added!')
-        else:
-            await update.message.reply_text(f'Wallet {sol_addy} is already being tracked!')
-
-    else:
-        await update.message.reply_text(f'Wallet {sol_addy} is invalid!')
-
 async def remove_wallet(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """
     Remove a valid wallet from tracked list
@@ -82,7 +73,6 @@ async def remove_wallet(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(f'Successfully removed wallet: {sol_addy}')
     else:
         await update.message.reply_text(f'Wallet is not being tracked: {sol_addy}')
-
 
 async def list_wallet(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """
@@ -119,23 +109,52 @@ def handle_response(text: str) -> str:
         return 'Great, what about you?'
     
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """
+    Handle user inputs based on current state
+    """
+    user_id = str(update.message.chat.id)
+    user_input = update.message.text.strip()
+
     message_type: str = update.message.chat.type
     text: str = update.message.text
 
-    print(f'User ({update.message.chat.id}) in {message_type}: "{text}"')
+    # State 1: Wallet Name
+    if user_id in user_states:
+        state_info = user_states[user_id]
 
-    if message_type == 'group':
-        if BOT_USER in text:
-            new_text: str = text.replace(BOT_USER, '').strip()
-            response: str = handle_response(new_text)
-        else:
-            return 
-    else:
-        response: str = handle_response(text)
+        # Save Wallet Name
+        if state_info['state'] == 'waiting_for_wallet_name':
+            user_states[user_id] = {
+                'state': 'waiting_for_wallet_address',
+                'wallet_name': user_input
+            }
+            await update.message.reply_text(f'Got it! Now provide the wallet address for {user_input}')
+            return
+        
+    # State 2: Wallet Address
+    elif state_info['state'] == 'waiting_for_wallet_address':
+        wallet_name = state_info['wallet_name']
+        sol_addy = user_input
 
-    print('Bot', response)
-    await update.message.reply_text(response)    
+        # Save to Firebase
+        if valid_address(sol_addy):
+            user_ref = db.reference(f'users/{user_id}/wallets')
+            user_wallets = user_ref.get() or {}
+
+            if wallet_name not in user_wallets:
+                user_wallets[wallet_name] = sol_addy
+                user_ref.set(user_wallets)
+                await update.message.reply_text(f'Wallet {wallet_name} successfully added: {sol_addy}')
+            else:
+                await update.message.reply_text(f'A wallet with name {wallet_name} already exists!')
+        else: 
+            await update.message.reply_text(f'Provided address is invalid: {sol_addy}')
+        
+        # Clear state
+        del user_states[user_id]
+        return
     
+    await update.message.reply_text(f'Please add a new wallet :D')
 
 async def error(update: Update, context: ContextTypes.DEFAULT_TYPE):
     print(f'Update {update} caused error {context.error}')
@@ -144,8 +163,11 @@ if __name__ == '__main__':
     app = Application.builder().token(TOKEN).build()
 
     # Commands
+    # Add handlers for commands and messages
     app.add_handler(CommandHandler('start', start_command))
     app.add_handler(CommandHandler('help', help_command))
+    app.add_handler(CommandHandler('add_wallet', add_wallet))
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
 
     # Messages
     app.add_handler(MessageHandler(filters.TEXT, handle_message))
