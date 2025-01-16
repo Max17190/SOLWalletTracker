@@ -41,7 +41,16 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text('Thank you for joining Ox Wallet Tracker!')
 
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text('Please be patient, the tracker may be experiencing downtime')
+    help_text = (
+        "Available commands:\n"
+        "/start - Welcome message\n"
+        "/help - Show this help message\n"
+        "/add_wallet - Add a new wallet to track\n"
+        "/remove_wallet <name> - Remove a wallet by its name\n"
+        "/list_wallet - List all tracked wallets\n"
+        "/cancel - Cancel the current operation"
+    )
+    await update.message.reply_text(help_text)
 
 async def add_wallet(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """
