@@ -17,20 +17,24 @@ A Telegram Solana Address tracker integrated with Firebase and Helius Websocket 
 1. Clone repository
 
 git clone https://github.com/Max17190/SOLWalletTracker.git
+
 cd your-repo-name
 
-3. Install Dependencies
+2. Install Dependencies
 
 pip install -r requirements.txt
 
-4. Setup APIs
+3. Setup APIs
 
 Telegram Bot via Botfather
+
 Setup Firebase Realtime Databse
+
 Webhook URL for hosting Helius Websocket
+
 Helius API with Websocket
 
-5. Setup Environment Variables
+4. Setup Environment Variables
 
 Create a ".env" file and use the example file as reference for adding API keys
 
