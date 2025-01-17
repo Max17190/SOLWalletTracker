@@ -20,15 +20,18 @@ git clone https://github.com/Max17190/SOLWalletTracker.git
 cd your-repo-name
 
 3. Install Dependencies
+
 pip install -r requirements.txt
 
 4. Setup APIs
+
 Telegram Bot via Botfather
 Setup Firebase Realtime Databse
 Webhook URL for hosting Helius Websocket
 Helius API with Websocket
 
 5. Setup Environment Variables
+
 Create a ".env" file and use the example file as reference for adding API keys
 
 ## Usage & Configuration
