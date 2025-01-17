@@ -15,10 +15,11 @@ A Telegram Solana Address tracker integrated with Firebase and Helius Websocket 
 ## Installation
 
 1. Clone repository
+
 git clone https://github.com/Max17190/SOLWalletTracker.git
 cd your-repo-name
 
-2. Install Dependencies
+3. Install Dependencies
 pip install -r requirements.txt
 
 4. Setup APIs
